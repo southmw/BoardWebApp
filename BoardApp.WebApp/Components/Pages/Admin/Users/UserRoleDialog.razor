@@ -1,0 +1,126 @@
+@using BoardApp.WebApp.Models
+@using BoardApp.WebApp.Services
+@using MudBlazor
+@inject IRoleService RoleService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        @if (allRoles == null)
+        {
+            <MudStack AlignItems="AlignItems.Center" Class="py-4">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <MudText Typo="Typo.body2" Class="mt-2">역할 목록을 불러오는 중...</MudText>
+            </MudStack>
+        }
+        else
+        {
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    사용자에게 할당할 역할을 선택하세요
+                </MudText>
+
+                @foreach (var role in allRoles)
+                {
+                    <MudCheckBox T="bool"
+                                 Checked="@selectedRoles.Contains(role.Name!)"
+                                 CheckedChanged="@((bool value) => OnRoleChanged(role.Name!, value))"
+                                 Label="@role.Name"
+                                 Color="@GetRoleColor(role.Name)">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @role.Description
+                        </MudText>
+                    </MudCheckBox>
+                }
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">취소</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="HandleSubmit">
+            저장
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IDialogReference? MudDialog { get; set; }
+
+    [Parameter]
+    public ApplicationUser User { get; set; } = new();
+
+    [Parameter]
+    public List<string> CurrentRoles { get; set; } = new();
+
+    private List<ApplicationRole>? allRoles;
+    private HashSet<string> selectedRoles = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        allRoles = await RoleService.GetAllRolesAsync();
+        selectedRoles = new HashSet<string>(CurrentRoles);
+    }
+
+    private void OnRoleChanged(string roleName, bool isChecked)
+    {
+        if (isChecked)
+        {
+            selectedRoles.Add(roleName);
+        }
+        else
+        {
+            selectedRoles.Remove(roleName);
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        // 추가할 역할
+        var rolesToAdd = selectedRoles.Except(CurrentRoles).ToList();
+        // 제거할 역할
+        var rolesToRemove = CurrentRoles.Except(selectedRoles).ToList();
+
+        bool success = true;
+
+        // 역할 추가
+        foreach (var role in rolesToAdd)
+        {
+            if (!await RoleService.AddUserToRoleAsync(User.Id, role))
+            {
+                success = false;
+                Snackbar.Add($"'{role}' 역할 추가에 실패했습니다.", Severity.Error);
+            }
+        }
+
+        // 역할 제거
+        foreach (var role in rolesToRemove)
+        {
+            if (!await RoleService.RemoveUserFromRoleAsync(User.Id, role))
+            {
+                success = false;
+                Snackbar.Add($"'{role}' 역할 제거에 실패했습니다.", Severity.Error);
+            }
+        }
+
+        if (success)
+        {
+            MudDialog?.Close(DialogResult.Ok(true));
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Close();
+    }
+
+    private Color GetRoleColor(string? roleName)
+    {
+        return roleName switch
+        {
+            "Admin" => Color.Error,
+            "User" => Color.Primary,
+            _ => Color.Default
+        };
+    }
+}

@@ -1,0 +1,429 @@
+@page "/boards/{id:int}"
+@using BoardApp.WebApp.Models
+@using BoardApp.WebApp.Services
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Identity
+@inject IBoardService BoardService
+@inject IFileUploadService FileUploadService
+@inject ICommentService CommentService
+@inject NavigationManager NavigationManager
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+
+<PageTitle>게시글 상세</PageTitle>
+
+@if (board == null)
+{
+    <MudStack AlignItems="AlignItems.Center" Class="py-8">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        <MudText Typo="Typo.body1" Class="mt-4">게시글을 불러오는 중...</MudText>
+    </MudStack>
+}
+else
+{
+    <MudStack Spacing="3">
+        <!-- Header Section -->
+        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <MudText Typo="Typo.h3" Style="font-weight: 700; margin-bottom: 8px;">@board.Title</MudText>
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Style="margin-bottom: 16px;">
+                @if (board.Category.IsPinned)
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Color="Color.Warning" />
+                }
+                <MudChip T="string" Text="@board.Category.Name" Color="Color.Primary" Size="Size.Medium"
+                         Style="@($"background-color: {board.Category.Color}; color: white;")" />
+            </MudStack>
+            <MudStack Row="true" Spacing="3" Class="flex-wrap">
+                <MudText Typo="Typo.body2" Style="background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 16px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-1" /> @board.Author
+                </MudText>
+                <MudText Typo="Typo.body2" Style="background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 16px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Class="mr-1" /> @board.ViewCount
+                </MudText>
+                <MudText Typo="Typo.body2" Style="background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 16px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Class="mr-1" /> @board.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                </MudText>
+                @if (board.UpdatedAt.HasValue)
+                {
+                    <MudText Typo="Typo.body2" Style="background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 16px;">
+                        <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="mr-1" /> 수정됨: @board.UpdatedAt.Value.ToString("yyyy-MM-dd HH:mm")
+                    </MudText>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <!-- Content Section -->
+        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 12px; border: 1px solid #e0e0e0;">
+            <div class="ql-editor" style="padding: 0; min-height: 200px;">
+                @((MarkupString)board.Content)
+            </div>
+        </MudPaper>
+
+        <!-- Attachments Section -->
+        @if (board.Attachments != null && board.Attachments.Any())
+        {
+            <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 12px; border: 1px solid #e0e0e0;">
+                <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.AttachFile" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6" Style="font-weight: 600;">첨부파일 (@board.Attachments.Count)</MudText>
+                </MudStack>
+                <MudGrid>
+                    @foreach (var attachment in board.Attachments)
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudCard Elevation="0" Style="border-radius: 12px; border: 1px solid #e0e0e0; overflow: hidden;">
+                                @if (FileUploadService.IsImageFile(attachment.ContentType))
+                                {
+                                    <MudCardMedia Image="@FileUploadService.GetFileUrl(attachment.FilePath)"
+                                                 Height="200"
+                                                 Style="object-fit: cover;" />
+                                }
+                                else if (FileUploadService.IsVideoFile(attachment.ContentType))
+                                {
+                                    <video controls style="width: 100%; height: 200px;">
+                                        <source src="@FileUploadService.GetFileUrl(attachment.FilePath)" type="@attachment.ContentType">
+                                        Your browser does not support the video tag.
+                                    </video>
+                                }
+                                else
+                                {
+                                    <MudCardContent Style="text-align: center; padding: 40px;">
+                                        <MudIcon Icon="@Icons.Material.Filled.InsertDriveFile" Size="Size.Large" Color="Color.Secondary" />
+                                    </MudCardContent>
+                                }
+                                <MudCardContent>
+                                    <MudText Typo="Typo.body2" Style="font-weight: 500;">@attachment.FileName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@string.Format("{0:F2} MB", attachment.FileSize / 1024.0 / 1024.0)</MudText>
+                                </MudCardContent>
+                                <MudCardActions>
+                                    <MudButton Href="@FileUploadService.GetFileUrl(attachment.FilePath)"
+                                              Target="_blank"
+                                              Size="Size.Small"
+                                              Variant="Variant.Text"
+                                              Color="Color.Primary"
+                                              StartIcon="@Icons.Material.Filled.Download">
+                                        다운로드
+                                    </MudButton>
+                                </MudCardActions>
+                            </MudCard>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudPaper>
+        }
+
+        <!-- Comments Section -->
+        <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 12px; border: 1px solid #e0e0e0;">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Comment" Color="Color.Primary" />
+                <MudText Typo="Typo.h5" Style="font-weight: 600;">댓글 (@comments.Count)</MudText>
+            </MudStack>
+
+            <!-- 댓글 작성 폼 -->
+            <AuthorizeView Context="auth">
+                <Authorized>
+                    <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background: #f8f9fa; border-radius: 12px;">
+                        <EditForm Model="@newComment" OnValidSubmit="HandleAddComment">
+                            <DataAnnotationsValidator />
+                            <MudStack Spacing="3">
+                                <MudTextField Label="댓글을 입력하세요" @bind-Value="newComment.Content"
+                                              For="@(() => newComment.Content)"
+                                              Variant="Variant.Outlined"
+                                              Lines="3"
+                                              Style="background: white; border-radius: 8px;" />
+                                <div style="text-align: right;">
+                                    <MudButton ButtonType="ButtonType.Submit"
+                                               Variant="Variant.Filled"
+                                               Color="Color.Primary"
+                                               StartIcon="@Icons.Material.Filled.Send"
+                                               Style="border-radius: 8px;">
+                                        댓글 작성
+                                    </MudButton>
+                                </div>
+                            </MudStack>
+                        </EditForm>
+                    </MudPaper>
+                </Authorized>
+                <NotAuthorized>
+                    <MudPaper Elevation="0" Class="pa-4 mb-4" Style="background: #f8f9fa; border-radius: 12px; text-align: center;">
+                        <MudText Typo="Typo.body1" Color="Color.Secondary">
+                            댓글을 작성하려면 로그인이 필요합니다.
+                        </MudText>
+                        <MudButton Href="/account/login" Variant="Variant.Filled" Color="Color.Primary" Class="mt-2">
+                            로그인
+                        </MudButton>
+                    </MudPaper>
+                </NotAuthorized>
+            </AuthorizeView>
+
+            <MudDivider Class="my-2" />
+
+            <!-- 댓글 목록 -->
+            <MudStack Spacing="2" Class="mt-4">
+                @if (comments.Any())
+                {
+                    @foreach (var comment in comments)
+                    {
+                        <MudPaper Elevation="0" Class="pa-4" Style="border-radius: 12px; background: #f8f9fa; border-left: 4px solid #667eea;">
+                            <MudStack Spacing="2">
+                                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                        <MudAvatar Size="Size.Small" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                            @comment.Author.Substring(0, 1).ToUpper()
+                                        </MudAvatar>
+                                        <div>
+                                            <MudText Typo="Typo.body1" Style="font-weight: 600;">@comment.Author</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @comment.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                                                @if (comment.UpdatedAt.HasValue)
+                                                {
+                                                    <span> • 수정됨</span>
+                                                }
+                                            </MudText>
+                                        </div>
+                                    </MudStack>
+                                    <MudStack Row="true" Spacing="1">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                                      Size="Size.Small"
+                                                      Color="Color.Primary"
+                                                      Style="border-radius: 8px;"
+                                                      OnClick="@(() => StartEditComment(comment))" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                      Size="Size.Small"
+                                                      Color="Color.Error"
+                                                      Style="border-radius: 8px;"
+                                                      OnClick="@(() => DeleteComment(comment.Id))" />
+                                    </MudStack>
+                                </MudStack>
+                                @if (editingCommentId == comment.Id)
+                                {
+                                    <EditForm Model="@editComment" OnValidSubmit="HandleUpdateComment">
+                                        <DataAnnotationsValidator />
+                                        <MudStack Spacing="2" Class="mt-2">
+                                            <MudTextField Label="댓글 내용" @bind-Value="editComment.Content"
+                                                          For="@(() => editComment.Content)"
+                                                          Variant="Variant.Outlined"
+                                                          Lines="3"
+                                                          Style="background: white; border-radius: 8px;" />
+                                            <MudStack Row="true" Spacing="1">
+                                                <MudButton ButtonType="ButtonType.Submit"
+                                                           Variant="Variant.Filled"
+                                                           Color="Color.Primary"
+                                                           Size="Size.Small"
+                                                           Style="border-radius: 8px;">
+                                                    수정 완료
+                                                </MudButton>
+                                                <MudButton Variant="Variant.Outlined"
+                                                           Color="Color.Secondary"
+                                                           Size="Size.Small"
+                                                           Style="border-radius: 8px;"
+                                                           OnClick="CancelEditComment">
+                                                    취소
+                                                </MudButton>
+                                            </MudStack>
+                                        </MudStack>
+                                    </EditForm>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2" Class="mt-1" Style="line-height: 1.6;">@comment.Content</MudText>
+                                }
+                            </MudStack>
+                        </MudPaper>
+                    }
+                }
+                else
+                {
+                    <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 12px; border: 2px dashed #e0e0e0; text-align: center;">
+                        <MudIcon Icon="@Icons.Material.Filled.Comment" Size="Size.Large" Color="Color.Secondary" Class="mb-2" />
+                        <MudText Typo="Typo.body1" Color="Color.Secondary">아직 댓글이 없습니다</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">첫 댓글을 작성해보세요!</MudText>
+                    </MudPaper>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <!-- Action Buttons -->
+        <MudStack Row="true" Spacing="2" Justify="Justify.Center" Class="mt-4">
+            @if (CanEditOrDelete())
+            {
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.Edit"
+                           Style="border-radius: 12px; padding: 12px 24px;"
+                           OnClick="@(() => NavigationManager.NavigateTo($"/boards/edit/{board.Id}"))">
+                    수정
+                </MudButton>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Error"
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.Delete"
+                           Style="border-radius: 12px; padding: 12px 24px;"
+                           OnClick="DeleteBoard">
+                    삭제
+                </MudButton>
+            }
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Secondary"
+                       Size="Size.Large"
+                       StartIcon="@Icons.Material.Filled.List"
+                       Style="border-radius: 12px; padding: 12px 24px;"
+                       OnClick="@(() => NavigationManager.NavigateTo("/boards"))">
+                목록
+            </MudButton>
+        </MudStack>
+    </MudStack>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private Board? board;
+    private List<Comment> comments = new();
+    private Comment newComment = new();
+    private Comment editComment = new();
+    private int? editingCommentId = null;
+    private ApplicationUser? currentUser;
+    private bool isAdmin = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        board = await BoardService.GetBoardByIdAsync(Id);
+        if (board != null)
+        {
+            await BoardService.IncrementViewCountAsync(Id);
+            await LoadComments();
+        }
+
+        // 현재 로그인한 사용자 정보 가져오기
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUser = await UserManager.GetUserAsync(user);
+            isAdmin = user.IsInRole("Admin");
+        }
+    }
+
+    private bool CanEditOrDelete()
+    {
+        if (board == null || currentUser == null)
+            return false;
+
+        // Admin이거나 작성자인 경우
+        return isAdmin || board.AuthorId == currentUser.Id;
+    }
+
+    private async Task LoadComments()
+    {
+        comments = await CommentService.GetCommentsByBoardIdAsync(Id);
+    }
+
+    private async Task HandleAddComment()
+    {
+        try
+        {
+            if (currentUser != null)
+            {
+                newComment.Author = currentUser.DisplayName ?? currentUser.Email ?? "익명";
+                newComment.AuthorId = currentUser.Id;
+            }
+
+            newComment.BoardId = Id;
+            await CommentService.CreateCommentAsync(newComment);
+            Snackbar.Add("댓글이 작성되었습니다.", Severity.Success);
+            newComment = new Comment(); // 폼 초기화
+            await LoadComments();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"오류가 발생했습니다: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void StartEditComment(Comment comment)
+    {
+        editingCommentId = comment.Id;
+        editComment = new Comment
+        {
+            Id = comment.Id,
+            Content = comment.Content,
+            Author = comment.Author,
+            BoardId = comment.BoardId
+        };
+    }
+
+    private void CancelEditComment()
+    {
+        editingCommentId = null;
+        editComment = new Comment();
+    }
+
+    private async Task HandleUpdateComment()
+    {
+        try
+        {
+            if (editingCommentId.HasValue)
+            {
+                await CommentService.UpdateCommentAsync(editingCommentId.Value, editComment);
+                Snackbar.Add("댓글이 수정되었습니다.", Severity.Success);
+                editingCommentId = null;
+                editComment = new Comment();
+                await LoadComments();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"오류가 발생했습니다: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteComment(int commentId)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "삭제 확인",
+            "정말로 이 댓글을 삭제하시겠습니까?",
+            yesText:"삭제", cancelText:"취소");
+
+        if (result == true)
+        {
+            try
+            {
+                await CommentService.DeleteCommentAsync(commentId);
+                Snackbar.Add("댓글이 삭제되었습니다.", Severity.Success);
+                await LoadComments();
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"오류가 발생했습니다: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task DeleteBoard()
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "삭제 확인",
+            "정말로 이 게시글을 삭제하시겠습니까?",
+            yesText:"삭제", cancelText:"취소");
+
+        if (result == true)
+        {
+            var deleted = await BoardService.DeleteBoardAsync(Id);
+            if (deleted)
+            {
+                Snackbar.Add("게시글이 삭제되었습니다.", Severity.Success);
+                NavigationManager.NavigateTo("/boards");
+            }
+            else
+            {
+                Snackbar.Add("삭제에 실패했습니다.", Severity.Error);
+            }
+        }
+    }
+}

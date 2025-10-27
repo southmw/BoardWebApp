@@ -1,0 +1,136 @@
+@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
+@inject NavigationManager NavigationManager
+
+<PageTitle>Home</PageTitle>
+
+<MudStack Spacing="6">
+    <!-- Hero Section -->
+    <MudPaper Elevation="0" Class="pa-8" Style="border-radius: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-align: center;">
+        <MudStack Spacing="3" AlignItems="AlignItems.Center">
+            <MudIcon Icon="@Icons.Material.Filled.Forum" Size="Size.Large" Style="font-size: 80px; opacity: 0.9;" />
+            <MudText Typo="Typo.h2" Style="font-weight: 700;">South Board</MudText>
+            <MudText Typo="Typo.h6" Style="opacity: 0.9; max-width: 600px;">
+                자유롭게 의견을 나누고 소통하는 커뮤니티 플랫폼입니다
+            </MudText>
+            <MudButton Variant="Variant.Filled"
+                       Size="Size.Large"
+                       StartIcon="@Icons.Material.Filled.Create"
+                       Style="background: white; color: #667eea; border-radius: 12px; padding: 12px 32px; margin-top: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);"
+                       OnClick="@(() => NavigationManager.NavigateTo("/boards"))">
+                게시판 바로가기
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+
+    <!-- Features Section -->
+    <div>
+        <MudText Typo="Typo.h4" Style="font-weight: 700; text-align: center; margin-bottom: 32px;">
+            주요 기능
+        </MudText>
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 12px; border: 1px solid #e0e0e0; height: 100%; transition: transform 0.3s, box-shadow 0.3s;"
+                          onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 12px 24px rgba(0,0,0,0.1)'"
+                          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    <MudStack Spacing="2" AlignItems="AlignItems.Center" Style="text-align: center;">
+                        <div Style="width: 60px; height: 60px; border-radius: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
+                            <MudIcon Icon="@Icons.Material.Filled.Article" Style="color: white; font-size: 32px;" />
+                        </div>
+                        <MudText Typo="Typo.h6" Style="font-weight: 600;">게시판</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            자유롭게 글을 작성하고 공유할 수 있습니다
+                        </MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 12px; border: 1px solid #e0e0e0; height: 100%; transition: transform 0.3s, box-shadow 0.3s;"
+                          onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 12px 24px rgba(0,0,0,0.1)'"
+                          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    <MudStack Spacing="2" AlignItems="AlignItems.Center" Style="text-align: center;">
+                        <div Style="width: 60px; height: 60px; border-radius: 12px; background: linear-gradient(135deg, #06d6a0 0%, #1b9aaa 100%); display: flex; align-items: center; justify-content: center;">
+                            <MudIcon Icon="@Icons.Material.Filled.Comment" Style="color: white; font-size: 32px;" />
+                        </div>
+                        <MudText Typo="Typo.h6" Style="font-weight: 600;">댓글</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            게시글에 댓글을 달아 소통할 수 있습니다
+                        </MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 12px; border: 1px solid #e0e0e0; height: 100%; transition: transform 0.3s, box-shadow 0.3s;"
+                          onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 12px 24px rgba(0,0,0,0.1)'"
+                          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    <MudStack Spacing="2" AlignItems="AlignItems.Center" Style="text-align: center;">
+                        <div Style="width: 60px; height: 60px; border-radius: 12px; background: linear-gradient(135deg, #ffd166 0%, #ef476f 100%); display: flex; align-items: center; justify-content: center;">
+                            <MudIcon Icon="@Icons.Material.Filled.AttachFile" Style="color: white; font-size: 32px;" />
+                        </div>
+                        <MudText Typo="Typo.h6" Style="font-weight: 600;">파일 첨부</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            이미지, 비디오 등 다양한 파일을 첨부할 수 있습니다
+                        </MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 12px; border: 1px solid #e0e0e0; height: 100%; transition: transform 0.3s, box-shadow 0.3s;"
+                          onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 12px 24px rgba(0,0,0,0.1)'"
+                          onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    <MudStack Spacing="2" AlignItems="AlignItems.Center" Style="text-align: center;">
+                        <div Style="width: 60px; height: 60px; border-radius: 12px; background: linear-gradient(135deg, #4cc9f0 0%, #4361ee 100%); display: flex; align-items: center; justify-content: center;">
+                            <MudIcon Icon="@Icons.Material.Filled.Edit" Style="color: white; font-size: 32px;" />
+                        </div>
+                        <MudText Typo="Typo.h6" Style="font-weight: 600;">리치 에디터</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            다양한 서식으로 내용을 작성할 수 있습니다
+                        </MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    </div>
+
+    <!-- Quick Links -->
+    <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 12px; background: #f8f9fa;">
+        <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <div>
+                <MudText Typo="Typo.h5" Style="font-weight: 600; margin-bottom: 8px;">지금 바로 시작하세요</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary">다양한 주제로 자유롭게 소통해보세요</MudText>
+            </div>
+            <MudStack Row="true" Spacing="2">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.List"
+                           Style="border-radius: 12px;"
+                           OnClick="@(() => NavigationManager.NavigateTo("/boards"))">
+                    게시판 보기
+                </MudButton>
+                <AuthorizeView>
+                    <Authorized>
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   Size="Size.Large"
+                                   StartIcon="@Icons.Material.Filled.Create"
+                                   Style="border-radius: 12px;"
+                                   OnClick="@(() => NavigationManager.NavigateTo("/boards/create"))">
+                            글쓰기
+                        </MudButton>
+                    </Authorized>
+                    <NotAuthorized>
+                        <MudButton Variant="Variant.Outlined"
+                                   Color="Color.Primary"
+                                   Size="Size.Large"
+                                   StartIcon="@Icons.Material.Filled.Login"
+                                   Style="border-radius: 12px;"
+                                   OnClick="@(() => NavigationManager.NavigateTo("/account/login?returnUrl=/boards/create"))">
+                            로그인하고 글쓰기
+                        </MudButton>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </MudStack>
+        </MudStack>
+    </MudPaper>
+</MudStack>

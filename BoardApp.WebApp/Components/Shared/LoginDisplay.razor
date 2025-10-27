@@ -1,0 +1,100 @@
+@using BoardApp.WebApp.Models
+@using Microsoft.AspNetCore.Identity
+@using BoardApp.WebApp.Services
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserManager<ApplicationUser> UserManager
+@inject UserStateService UserStateService
+@implements IDisposable
+
+<AuthorizeView>
+    <Authorized>
+        <MudMenu Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Inherit" Direction="Direction.Bottom" OffsetY="true">
+            <ActivatorContent>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                    @if (!string.IsNullOrEmpty(currentUser?.ProfileImageUrl))
+                    {
+                        var avatarImageUrl = currentUser.ProfileImageUrl.StartsWith("/") ? currentUser.ProfileImageUrl : $"/{currentUser.ProfileImageUrl}";
+                        <MudAvatar Size="Size.Small">
+                            <MudImage Src="@avatarImageUrl" Alt="프로필" Style="width: 100%; height: 100%; object-fit: cover;" />
+                        </MudAvatar>
+                    }
+                    else
+                    {
+                        <MudAvatar Color="Color.Primary" Size="Size.Small">
+                            @GetUserInitials()
+                        </MudAvatar>
+                    }
+                    <MudText Typo="Typo.body2">@GetDisplayName()</MudText>
+                </MudStack>
+            </ActivatorContent>
+            <ChildContent>
+                <MudMenuItem Icon="@Icons.Material.Filled.Person" Href="/account/profile">
+                    내 프로필
+                </MudMenuItem>
+                <MudDivider />
+                <MudMenuItem Icon="@Icons.Material.Filled.Logout" Href="/account/logout">
+                    로그아웃
+                </MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+    </Authorized>
+    <NotAuthorized>
+        <MudStack Row="true" Spacing="2">
+            <MudButton Href="/account/login" Variant="Variant.Text" Color="Color.Inherit" Size="Size.Small">
+                로그인
+            </MudButton>
+            <MudButton Href="/account/register" Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small"
+                       Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                회원가입
+            </MudButton>
+        </MudStack>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private ApplicationUser? currentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUser();
+
+        // UserStateService의 이벤트 구독
+        UserStateService.OnUserChanged += OnUserStateChanged;
+    }
+
+    private async Task LoadUser()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            currentUser = await UserManager.GetUserAsync(user);
+            UserStateService.UpdateUser(currentUser);
+        }
+    }
+
+    private void OnUserStateChanged()
+    {
+        currentUser = UserStateService.CurrentUser;
+        InvokeAsync(StateHasChanged);
+    }
+
+    private string GetDisplayName()
+    {
+        return currentUser?.DisplayName ?? currentUser?.Email ?? "사용자";
+    }
+
+    private string GetUserInitials()
+    {
+        var displayName = GetDisplayName();
+        if (displayName.Length >= 2)
+            return displayName.Substring(0, 2).ToUpper();
+        return displayName.Substring(0, 1).ToUpper();
+    }
+
+    public void Dispose()
+    {
+        UserStateService.OnUserChanged -= OnUserStateChanged;
+    }
+}

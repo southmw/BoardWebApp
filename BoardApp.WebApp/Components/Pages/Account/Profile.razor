@@ -1,0 +1,515 @@
+@page "/account/profile"
+@using BoardApp.WebApp.Models
+@using BoardApp.WebApp.Services
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.EntityFrameworkCore
+@using BoardApp.WebApp.Data
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IDbContextFactory<ApplicationDbContext> ContextFactory
+@inject UserManager<ApplicationUser> UserManager
+@inject IUserService UserService
+@inject IFileUploadService FileUploadService
+@inject ISnackbar Snackbar
+@inject UserStateService UserStateService
+@rendermode InteractiveServer
+
+<PageTitle>내 프로필</PageTitle>
+
+<MudStack Spacing="4">
+    <!-- Header Section -->
+    <div>
+        <MudText Typo="Typo.h3" Style="font-weight: 700; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            내 프로필
+        </MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+            프로필 정보를 확인하고 수정할 수 있습니다
+        </MudText>
+    </div>
+
+    @if (currentUser == null)
+    {
+        <MudStack AlignItems="AlignItems.Center" Class="py-8">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.body1" Class="mt-4">프로필을 불러오는 중...</MudText>
+        </MudStack>
+    }
+    else
+    {
+        <MudGrid>
+            <!-- 프로필 정보 카드 -->
+            <MudItem xs="12" md="4">
+                <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 12px; border: 1px solid #e0e0e0;">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                        @if (!string.IsNullOrEmpty(editModel.ProfileImageUrl))
+                        {
+                            var imageUrl = editModel.ProfileImageUrl.StartsWith("/") ? editModel.ProfileImageUrl : $"/{editModel.ProfileImageUrl}";
+                            <MudAvatar Size="Size.Large" Style="width: 100px; height: 100px;">
+                                <MudImage Src="@imageUrl" Alt="프로필 이미지" Style="width: 100%; height: 100%; object-fit: cover;" />
+                            </MudAvatar>
+                        }
+                        else
+                        {
+                            <MudAvatar Color="Color.Primary" Size="Size.Large" Style="width: 100px; height: 100px; font-size: 32px;">
+                                @GetUserInitials()
+                            </MudAvatar>
+                        }
+                        <div style="text-align: center;">
+                            <MudText Typo="Typo.h5" Style="font-weight: 600;">
+                                @(currentUser.DisplayName ?? currentUser.Email)
+                            </MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+                                @currentUser.Email
+                            </MudText>
+                        </div>
+                        <MudDivider />
+                        <MudStack Spacing="2" Style="width: 100%;">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">가입일</MudText>
+                            <MudText Typo="Typo.body2">@currentUser.CreatedAt.ToString("yyyy-MM-dd")</MudText>
+                        </MudStack>
+                        @if (currentUser.LastLoginAt.HasValue)
+                        {
+                            <MudStack Spacing="2" Style="width: 100%;">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">마지막 로그인</MudText>
+                                <MudText Typo="Typo.body2">@currentUser.LastLoginAt.Value.ToString("yyyy-MM-dd HH:mm")</MudText>
+                            </MudStack>
+                        }
+                        <MudStack Spacing="2" Style="width: 100%;">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">역할</MudText>
+                            <MudStack Row="true" Spacing="1">
+                                @foreach (var role in userRoles)
+                                {
+                                    <MudChip T="string" Text="@role" Size="Size.Small" Color="@GetRoleColor(role)" />
+                                }
+                            </MudStack>
+                        </MudStack>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- 프로필 수정 폼 -->
+            <MudItem xs="12" md="8">
+                <MudPaper Elevation="0" Class="pa-6" Style="border-radius: 12px; border: 1px solid #e0e0e0;">
+                    <MudText Typo="Typo.h6" Style="font-weight: 600; margin-bottom: 24px;">
+                        프로필 정보 수정
+                    </MudText>
+
+                    <EditForm Model="@editModel" OnValidSubmit="HandleUpdateProfile">
+                        <DataAnnotationsValidator />
+                        <MudStack Spacing="3">
+                            <MudTextField @bind-Value="editModel.DisplayName"
+                                          For="@(() => editModel.DisplayName)"
+                                          Label="표시 이름"
+                                          Variant="Variant.Outlined"
+                                          HelperText="다른 사용자에게 보여질 이름입니다" />
+
+                            <MudTextField @bind-Value="editModel.Email"
+                                          For="@(() => editModel.Email)"
+                                          Label="이메일"
+                                          Variant="Variant.Outlined"
+                                          Disabled="true"
+                                          HelperText="이메일 주소는 변경할 수 없습니다" />
+
+                            <MudTextField @bind-Value="editModel.Bio"
+                                          For="@(() => editModel.Bio)"
+                                          Label="자기소개"
+                                          Variant="Variant.Outlined"
+                                          Lines="5"
+                                          HelperText="간단한 자기소개를 작성해주세요" />
+
+                            <MudTextField @bind-Value="editModel.ProfileImageUrl"
+                                          For="@(() => editModel.ProfileImageUrl)"
+                                          Label="프로필 이미지 URL"
+                                          Variant="Variant.Outlined"
+                                          HelperText="프로필 이미지 URL을 입력하거나 아래에서 파일을 업로드하세요"
+                                          Disabled="@isUploading" />
+
+                            <MudDivider />
+
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                또는 로컬 파일 업로드
+                            </MudText>
+
+                            <InputFile id="profileImageInput" OnChange="HandleProfileImageSelected" accept="image/*" hidden />
+
+                            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                                <MudButton HtmlTag="label"
+                                           for="profileImageInput"
+                                           Variant="Variant.Outlined"
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.CloudUpload"
+                                           Disabled="@isUploading">
+                                    파일 선택
+                                </MudButton>
+
+                                @if (selectedProfileImage != null)
+                                {
+                                    <MudText Typo="Typo.body2">@selectedProfileImage.Name</MudText>
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="Color.Success"
+                                               Size="Size.Small"
+                                               StartIcon="@Icons.Material.Filled.Upload"
+                                               OnClick="HandleUploadProfileImage"
+                                               Disabled="@isUploading">
+                                        업로드
+                                    </MudButton>
+                                }
+
+                                @if (isUploading)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                    <MudText Typo="Typo.body2">업로드 중...</MudText>
+                                }
+                            </MudStack>
+
+                            @if (!string.IsNullOrEmpty(editModel.ProfileImageUrl))
+                            {
+                                var previewUrl = editModel.ProfileImageUrl.StartsWith("/") ? editModel.ProfileImageUrl : $"/{editModel.ProfileImageUrl}";
+                                <MudStack Spacing="2">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">현재 프로필 이미지 미리보기</MudText>
+                                    <MudImage Src="@previewUrl"
+                                              Alt="프로필 이미지"
+                                              Style="max-width: 200px; max-height: 200px; border-radius: 8px; border: 1px solid #e0e0e0;" />
+                                </MudStack>
+                            }
+
+                            <MudStack Row="true" Spacing="2" Class="mt-4">
+                                <MudButton ButtonType="ButtonType.Submit"
+                                           Variant="Variant.Filled"
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Save">
+                                    저장
+                                </MudButton>
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Secondary"
+                                           StartIcon="@Icons.Material.Filled.Cancel"
+                                           OnClick="ResetForm">
+                                    취소
+                                </MudButton>
+                            </MudStack>
+                        </MudStack>
+                    </EditForm>
+                </MudPaper>
+
+                <!-- 비밀번호 변경 -->
+                <MudPaper Elevation="0" Class="pa-6 mt-4" Style="border-radius: 12px; border: 1px solid #e0e0e0;">
+                    <MudText Typo="Typo.h6" Style="font-weight: 600; margin-bottom: 24px;">
+                        비밀번호 변경
+                    </MudText>
+
+                    <EditForm Model="@passwordModel" OnValidSubmit="HandleChangePassword">
+                        <DataAnnotationsValidator />
+                        <MudStack Spacing="3">
+                            <MudTextField @bind-Value="passwordModel.CurrentPassword"
+                                          For="@(() => passwordModel.CurrentPassword)"
+                                          Label="현재 비밀번호"
+                                          Variant="Variant.Outlined"
+                                          InputType="InputType.Password" />
+
+                            <MudTextField @bind-Value="passwordModel.NewPassword"
+                                          For="@(() => passwordModel.NewPassword)"
+                                          Label="새 비밀번호"
+                                          Variant="Variant.Outlined"
+                                          InputType="InputType.Password" />
+
+                            <MudTextField @bind-Value="passwordModel.ConfirmPassword"
+                                          For="@(() => passwordModel.ConfirmPassword)"
+                                          Label="새 비밀번호 확인"
+                                          Variant="Variant.Outlined"
+                                          InputType="InputType.Password" />
+
+                            <MudButton ButtonType="ButtonType.Submit"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       StartIcon="@Icons.Material.Filled.Lock">
+                                비밀번호 변경
+                            </MudButton>
+                        </MudStack>
+                    </EditForm>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+</MudStack>
+
+@code {
+    private ApplicationUser? currentUser;
+    private List<string> userRoles = new();
+    private ProfileEditModel editModel = new();
+    private PasswordChangeModel passwordModel = new();
+    private IBrowserFile? selectedProfileImage;
+    private bool isUploading = false;
+    private string? tempUploadedImagePath; // 임시 업로드된 이미지 경로 추적
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserData();
+    }
+
+    private async Task LoadUserData()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true)
+        {
+            var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                // 사용자 정보 가져오기
+                using (var context = await ContextFactory.CreateDbContextAsync())
+                {
+                    currentUser = await context.Users
+                        .FirstOrDefaultAsync(u => u.Id == userId);
+                }
+
+                if (currentUser != null)
+                {
+                    // 역할 정보 가져오기 (별도의 context 사용)
+                    using (var context = await ContextFactory.CreateDbContextAsync())
+                    {
+                        userRoles = await context.UserRoles
+                            .Where(ur => ur.UserId == userId)
+                            .Join(context.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name!)
+                            .ToListAsync();
+                    }
+
+                    // Edit 모델 초기화
+                    editModel = new ProfileEditModel
+                    {
+                        DisplayName = currentUser.DisplayName,
+                        Email = currentUser.Email,
+                        Bio = currentUser.Bio,
+                        ProfileImageUrl = currentUser.ProfileImageUrl
+                    };
+                }
+            }
+        }
+    }
+
+    private async Task HandleUpdateProfile()
+    {
+        if (currentUser == null) return;
+
+        try
+        {
+            using var context = await ContextFactory.CreateDbContextAsync();
+            var user = await context.Users.FirstOrDefaultAsync(u => u.Id == currentUser.Id);
+
+            if (user != null)
+            {
+                // 프로필 이미지가 변경되었는지 확인
+                bool imageChanged = !string.IsNullOrEmpty(tempUploadedImagePath) &&
+                                   tempUploadedImagePath != currentUser.ProfileImageUrl;
+
+                // 이미지가 변경되었고 기존 이미지가 있다면 삭제
+                if (imageChanged && !string.IsNullOrEmpty(currentUser.ProfileImageUrl))
+                {
+                    await FileUploadService.DeleteProfileImageAsync(currentUser.ProfileImageUrl);
+                }
+
+                user.DisplayName = editModel.DisplayName;
+                user.Bio = editModel.Bio;
+                user.ProfileImageUrl = editModel.ProfileImageUrl;
+
+                await context.SaveChangesAsync();
+
+                // 업데이트 성공 후 사용자 정보 새로고침
+                await LoadUserData();
+
+                // UserStateService를 통해 전역 상태 업데이트
+                if (currentUser != null)
+                {
+                    currentUser.ProfileImageUrl = editModel.ProfileImageUrl;
+                    UserStateService.UpdateUser(currentUser);
+                }
+
+                // 임시 경로 초기화
+                tempUploadedImagePath = null;
+
+                Snackbar.Add("프로필이 업데이트되었습니다.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("프로필 업데이트에 실패했습니다.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"오류가 발생했습니다: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task HandleChangePassword()
+    {
+        if (currentUser == null) return;
+
+        if (passwordModel.NewPassword != passwordModel.ConfirmPassword)
+        {
+            Snackbar.Add("새 비밀번호가 일치하지 않습니다.", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            var result = await UserManager.ChangePasswordAsync(
+                currentUser,
+                passwordModel.CurrentPassword!,
+                passwordModel.NewPassword!
+            );
+
+            if (result.Succeeded)
+            {
+                Snackbar.Add("비밀번호가 변경되었습니다.", Severity.Success);
+                passwordModel = new PasswordChangeModel();
+            }
+            else
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                Snackbar.Add($"비밀번호 변경에 실패했습니다: {errors}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"오류가 발생했습니다: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async void ResetForm()
+    {
+        if (currentUser != null)
+        {
+            // 임시 업로드된 파일이 있으면 삭제
+            if (!string.IsNullOrEmpty(tempUploadedImagePath) &&
+                tempUploadedImagePath != currentUser.ProfileImageUrl)
+            {
+                try
+                {
+                    await FileUploadService.DeleteProfileImageAsync(tempUploadedImagePath);
+                }
+                catch
+                {
+                    // 삭제 실패해도 계속 진행
+                }
+            }
+
+            // 임시 경로 초기화
+            tempUploadedImagePath = null;
+            selectedProfileImage = null;
+
+            // 폼 초기화
+            editModel = new ProfileEditModel
+            {
+                DisplayName = currentUser.DisplayName,
+                Email = currentUser.Email,
+                Bio = currentUser.Bio,
+                ProfileImageUrl = currentUser.ProfileImageUrl
+            };
+
+            StateHasChanged();
+        }
+    }
+
+    private string GetUserInitials()
+    {
+        if (currentUser == null) return "U";
+
+        var displayName = currentUser.DisplayName ?? currentUser.Email ?? "User";
+        if (displayName.Length >= 2)
+            return displayName.Substring(0, 2).ToUpper();
+        return displayName.Substring(0, 1).ToUpper();
+    }
+
+    private Color GetRoleColor(string roleName)
+    {
+        return roleName switch
+        {
+            "Admin" => Color.Error,
+            "User" => Color.Primary,
+            _ => Color.Default
+        };
+    }
+
+    private void HandleProfileImageSelected(InputFileChangeEventArgs e)
+    {
+        selectedProfileImage = e.File;
+        StateHasChanged();
+    }
+
+    private async Task HandleUploadProfileImage()
+    {
+        if (selectedProfileImage == null || currentUser == null)
+        {
+            Snackbar.Add("파일을 선택해주세요.", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            isUploading = true;
+            StateHasChanged();
+
+            // 임시로 이미지 업로드 (DB 저장하지 않음)
+            var uploadedPath = await FileUploadService.UploadProfileImageAsync(selectedProfileImage, currentUser.Id);
+
+            if (!string.IsNullOrEmpty(uploadedPath))
+            {
+                // 이전 임시 업로드 파일이 있으면 삭제
+                if (!string.IsNullOrEmpty(tempUploadedImagePath) && tempUploadedImagePath != currentUser.ProfileImageUrl)
+                {
+                    await FileUploadService.DeleteProfileImageAsync(tempUploadedImagePath);
+                }
+
+                // 임시 경로 저장 및 editModel 업데이트 (미리보기용)
+                tempUploadedImagePath = uploadedPath;
+                editModel.ProfileImageUrl = uploadedPath;
+
+                Snackbar.Add("프로필 이미지가 준비되었습니다. 저장 버튼을 눌러 적용하세요.", Severity.Info);
+                selectedProfileImage = null;
+            }
+            else
+            {
+                Snackbar.Add("프로필 이미지 업로드에 실패했습니다.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"오류가 발생했습니다: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isUploading = false;
+            StateHasChanged();
+        }
+    }
+
+    public class ProfileEditModel
+    {
+        [StringLength(50)]
+        public string? DisplayName { get; set; }
+
+        [Required]
+        [EmailAddress]
+        public string? Email { get; set; }
+
+        [StringLength(500)]
+        public string? Bio { get; set; }
+
+        [StringLength(200)]
+        public string? ProfileImageUrl { get; set; }
+    }
+
+    public class PasswordChangeModel
+    {
+        [Required(ErrorMessage = "현재 비밀번호는 필수입니다.")]
+        public string? CurrentPassword { get; set; }
+
+        [Required(ErrorMessage = "새 비밀번호는 필수입니다.")]
+        [StringLength(100, MinimumLength = 6, ErrorMessage = "비밀번호는 최소 6자 이상이어야 합니다.")]
+        public string? NewPassword { get; set; }
+
+        [Required(ErrorMessage = "비밀번호 확인은 필수입니다.")]
+        public string? ConfirmPassword { get; set; }
+    }
+}

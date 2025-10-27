@@ -1,0 +1,89 @@
+@using BoardApp.WebApp.Models
+@using BoardApp.WebApp.Services
+@using MudBlazor
+@inject IRoleService RoleService
+
+<MudDialog>
+    <DialogContent>
+        @if (users == null)
+        {
+            <MudStack AlignItems="AlignItems.Center" Class="py-4">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <MudText Typo="Typo.body2" Class="mt-2">사용자 목록을 불러오는 중...</MudText>
+            </MudStack>
+        }
+        else if (!users.Any())
+        {
+            <MudStack AlignItems="AlignItems.Center" Class="py-4">
+                <MudIcon Icon="@Icons.Material.Filled.PersonOff" Size="Size.Large" Color="Color.Secondary" />
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-2">
+                    이 역할에 할당된 사용자가 없습니다
+                </MudText>
+            </MudStack>
+        }
+        else
+        {
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    총 @(users.Count)명의 사용자가 이 역할에 할당되어 있습니다
+                </MudText>
+
+                <MudList T="string" Dense="true">
+                    @foreach (var user in users)
+                    {
+                        <MudListItem T="string">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                <MudAvatar Color="Color.Primary" Size="Size.Small">
+                                    @GetUserInitials(user)
+                                </MudAvatar>
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.body1" Style="font-weight: 500;">
+                                        @(user.DisplayName ?? user.UserName)
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        @user.Email
+                                    </MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudListItem>
+                        <MudDivider />
+                    }
+                </MudList>
+            </MudStack>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary">닫기</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IDialogReference? MudDialog { get; set; }
+
+    [Parameter]
+    public ApplicationRole Role { get; set; } = new();
+
+    private List<ApplicationUser>? users;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(Role.Name))
+        {
+            users = await RoleService.GetUsersInRoleAsync(Role.Name);
+        }
+    }
+
+    private string GetUserInitials(ApplicationUser user)
+    {
+        var displayName = user.DisplayName ?? user.Email ?? "U";
+        if (displayName.Length >= 2)
+            return displayName.Substring(0, 2).ToUpper();
+        return displayName.Substring(0, 1).ToUpper();
+    }
+
+    private void Close()
+    {
+        MudDialog?.Close();
+    }
+}

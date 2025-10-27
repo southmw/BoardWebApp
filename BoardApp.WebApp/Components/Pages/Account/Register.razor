@@ -1,0 +1,137 @@
+@page "/account/register"
+@using BoardApp.WebApp.Models
+
+<PageTitle>회원가입</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+    <MudPaper Elevation="3" Class="pa-6" Style="border-radius: 16px;">
+        <MudStack Spacing="4">
+            <div style="text-align: center;">
+                <MudText Typo="Typo.h4" Style="font-weight: 700; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                    회원가입
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                    새로운 계정을 만들어보세요
+                </MudText>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Filled">@errorMessage</MudAlert>
+            }
+
+            <form method="post" action="/account/perform-register" style="width: 100%;">
+                <MudStack Spacing="3">
+                    <MudTextField T="string"
+                                  Label="이메일"
+                                  Name="email"
+                                  Variant="Variant.Outlined"
+                                  InputType="InputType.Email"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Email"
+                                  Required="true" />
+
+                    <MudTextField T="string"
+                                  Label="닉네임"
+                                  Name="displayName"
+                                  Variant="Variant.Outlined"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Person"
+                                  Required="true" />
+
+                    <MudTextField T="string"
+                                  Label="비밀번호"
+                                  Name="password"
+                                  Variant="Variant.Outlined"
+                                  InputType="@passwordInputType"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@passwordVisibilityIcon"
+                                  OnAdornmentClick="TogglePasswordVisibility"
+                                  AdornmentAriaLabel="비밀번호 표시/숨김"
+                                  Required="true" />
+
+                    <MudTextField T="string"
+                                  Label="비밀번호 확인"
+                                  Name="confirmPassword"
+                                  Variant="Variant.Outlined"
+                                  InputType="@confirmPasswordInputType"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@confirmPasswordVisibilityIcon"
+                                  OnAdornmentClick="ToggleConfirmPasswordVisibility"
+                                  AdornmentAriaLabel="비밀번호 확인 표시/숨김"
+                                  Required="true" />
+
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Size="Size.Large"
+                               Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        회원가입
+                    </MudButton>
+                </MudStack>
+            </form>
+
+            <MudDivider />
+
+            <MudButton Href="/account/external-login?provider=Google"
+                       Variant="Variant.Outlined"
+                       FullWidth="true"
+                       StartIcon="@Icons.Custom.Brands.Google"
+                       Color="Color.Default">
+                Google로 가입하기
+            </MudButton>
+
+            <MudText Typo="Typo.body2" Align="Align.Center">
+                이미 계정이 있으신가요?
+                <MudLink Href="/account/login" Style="font-weight: 600; color: #667eea;">
+                    로그인
+                </MudLink>
+            </MudText>
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? Error { get; set; }
+
+    private string? errorMessage;
+
+    private bool isPasswordVisible = false;
+    private InputType passwordInputType = InputType.Password;
+    private string passwordVisibilityIcon = Icons.Material.Filled.VisibilityOff;
+
+    private bool isConfirmPasswordVisible = false;
+    private InputType confirmPasswordInputType = InputType.Password;
+    private string confirmPasswordVisibilityIcon = Icons.Material.Filled.VisibilityOff;
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(Error))
+        {
+            if (Error == "password-mismatch")
+            {
+                errorMessage = "비밀번호가 일치하지 않습니다.";
+            }
+            else
+            {
+                errorMessage = Error;
+            }
+        }
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        isPasswordVisible = !isPasswordVisible;
+        passwordInputType = isPasswordVisible ? InputType.Text : InputType.Password;
+        passwordVisibilityIcon = isPasswordVisible ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+    }
+
+    private void ToggleConfirmPasswordVisibility()
+    {
+        isConfirmPasswordVisible = !isConfirmPasswordVisible;
+        confirmPasswordInputType = isConfirmPasswordVisible ? InputType.Text : InputType.Password;
+        confirmPasswordVisibilityIcon = isConfirmPasswordVisible ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+    }
+}

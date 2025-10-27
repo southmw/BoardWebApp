@@ -1,0 +1,27 @@
+@page "/account/access-denied"
+
+<PageTitle>접근 거부</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+    <MudPaper Elevation="0" Class="pa-8" Style="text-align: center; border-radius: 16px;">
+        <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large" Color="Color.Error" Style="font-size: 80px; margin-bottom: 24px;" />
+
+        <MudText Typo="Typo.h4" Style="font-weight: 700; margin-bottom: 16px;">
+            접근 권한이 없습니다
+        </MudText>
+
+        <MudText Typo="Typo.body1" Color="Color.Secondary" Style="margin-bottom: 32px;">
+            이 페이지에 접근할 수 있는 권한이 없습니다.<br />
+            관리자에게 문의하거나 로그인 상태를 확인해주세요.
+        </MudText>
+
+        <MudStack Row="true" Justify="Justify.Center" Spacing="2">
+            <MudButton Href="/" Variant="Variant.Filled" Color="Color.Primary">
+                홈으로 가기
+            </MudButton>
+            <MudButton Href="/account/login" Variant="Variant.Outlined" Color="Color.Primary">
+                로그인
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+</MudContainer>

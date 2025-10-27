@@ -1,0 +1,278 @@
+@page "/admin/roles"
+@using BoardApp.WebApp.Models
+@using BoardApp.WebApp.Services
+@attribute [Authorize(Roles = "Admin")]
+@inject IRoleService RoleService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@rendermode InteractiveServer
+
+<PageTitle>역할 관리</PageTitle>
+
+<MudStack Spacing="4">
+    <!-- Header Section -->
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+        <div>
+            <MudText Typo="Typo.h3" Style="font-weight: 700; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                역할 관리
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+                시스템 역할을 관리하고 사용자를 할당할 수 있습니다
+            </MudText>
+        </div>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Size="Size.Large"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Style="border-radius: 12px; padding: 12px 24px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);"
+                   OnClick="OpenCreateDialog">
+            새 역할 추가
+        </MudButton>
+    </MudStack>
+
+    <!-- Role List -->
+    @if (roles == null)
+    {
+        <MudStack AlignItems="AlignItems.Center" Class="py-8">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.body1" Class="mt-4">역할을 불러오는 중...</MudText>
+        </MudStack>
+    }
+    else if (!roles.Any())
+    {
+        <MudPaper Elevation="0" Class="pa-8" Style="border-radius: 12px; border: 2px dashed #e0e0e0;">
+            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Size="Size.Large" Color="Color.Secondary" />
+                <div style="text-align: center;">
+                    <MudText Typo="Typo.h6" Color="Color.Secondary">등록된 역할이 없습니다</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">첫 역할을 추가해보세요!</MudText>
+                </div>
+            </MudStack>
+        </MudPaper>
+    }
+    else
+    {
+        <MudPaper Elevation="0" Style="border-radius: 12px; overflow: hidden;">
+            <MudTable Items="@roles"
+                      Hover="true"
+                      Breakpoint="Breakpoint.Sm"
+                      Elevation="0"
+                      Style="background: white;">
+                <HeaderContent>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">역할 이름</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">설명</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">사용자 수</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">생성일</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">작업</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="역할 이름">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudIcon Icon="@GetRoleIcon(context.Name)" Color="@GetRoleColor(context.Name)" Size="Size.Small" />
+                            <span style="font-weight: 600;">@context.Name</span>
+                        </MudStack>
+                    </MudTd>
+                    <MudTd DataLabel="설명">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @(string.IsNullOrEmpty(context.Description) ? "-" : context.Description)
+                        </MudText>
+                    </MudTd>
+                    <MudTd DataLabel="사용자 수">
+                        @if (userCounts.ContainsKey(context.Id))
+                        {
+                            <MudChip T="string" Text="@($"{userCounts[context.Id]}명")" Size="Size.Small" Color="Color.Info" />
+                        }
+                        else
+                        {
+                            <MudText>0명</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="생성일">
+                        <MudText Typo="Typo.body2">@context.CreatedAt.ToString("yyyy-MM-dd")</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="작업">
+                        <MudStack Row="true" Spacing="1">
+                            <MudIconButton Icon="@Icons.Material.Filled.People"
+                                           Color="Color.Info"
+                                           Size="Size.Small"
+                                           Title="사용자 목록"
+                                           OnClick="@(() => ShowUsersInRole(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                           Color="Color.Primary"
+                                           Size="Size.Small"
+                                           Title="수정"
+                                           OnClick="@(() => OpenEditDialog(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           Size="Size.Small"
+                                           Title="삭제"
+                                           Disabled="@IsSystemRole(context.Name)"
+                                           OnClick="@(() => DeleteRole(context))" />
+                        </MudStack>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+    }
+</MudStack>
+
+@code {
+    private List<ApplicationRole>? roles;
+    private Dictionary<string, int> userCounts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRoles();
+    }
+
+    private async Task LoadRoles()
+    {
+        roles = await RoleService.GetAllRolesAsync();
+
+        // 각 역할별 사용자 수 조회
+        userCounts.Clear();
+        if (roles != null)
+        {
+            foreach (var role in roles)
+            {
+                var users = await RoleService.GetUsersInRoleAsync(role.Name!);
+                userCounts[role.Id] = users.Count;
+            }
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<RoleDialog>
+        {
+            { x => x.Role, new ApplicationRole() },
+            { x => x.IsEditMode, false }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<RoleDialog>("새 역할 추가", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadRoles();
+            Snackbar.Add("역할이 추가되었습니다.", Severity.Success);
+        }
+    }
+
+    private async Task OpenEditDialog(ApplicationRole role)
+    {
+        var parameters = new DialogParameters<RoleDialog>
+        {
+            { x => x.Role, role },
+            { x => x.IsEditMode, true }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<RoleDialog>("역할 수정", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadRoles();
+            Snackbar.Add("역할이 수정되었습니다.", Severity.Success);
+        }
+    }
+
+    private async Task DeleteRole(ApplicationRole role)
+    {
+        // 시스템 역할은 삭제 불가
+        if (IsSystemRole(role.Name))
+        {
+            Snackbar.Add("시스템 역할은 삭제할 수 없습니다.", Severity.Warning);
+            return;
+        }
+
+        // 사용자가 할당된 역할은 삭제 불가
+        var userCount = userCounts.ContainsKey(role.Id) ? userCounts[role.Id] : 0;
+        if (userCount > 0)
+        {
+            Snackbar.Add($"해당 역할에 {userCount}명의 사용자가 할당되어 있어 삭제할 수 없습니다.", Severity.Warning);
+            return;
+        }
+
+        var parameters = new DialogParameters
+        {
+            { "ContentText", $"'{role.Name}' 역할을 삭제하시겠습니까?" },
+            { "ButtonText", "삭제" },
+            { "Color", Color.Error }
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<MudMessageBox>("역할 삭제", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var success = await RoleService.DeleteRoleAsync(role.Id);
+            if (success)
+            {
+                await LoadRoles();
+                Snackbar.Add("역할이 삭제되었습니다.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("역할 삭제에 실패했습니다.", Severity.Error);
+            }
+        }
+    }
+
+    private async Task ShowUsersInRole(ApplicationRole role)
+    {
+        var parameters = new DialogParameters<RoleUsersDialog>
+        {
+            { x => x.Role, role }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        await DialogService.ShowAsync<RoleUsersDialog>($"{role.Name} 역할 사용자", parameters, options);
+    }
+
+    private bool IsSystemRole(string? roleName)
+    {
+        return roleName == "Admin" || roleName == "User";
+    }
+
+    private string GetRoleIcon(string? roleName)
+    {
+        return roleName switch
+        {
+            "Admin" => Icons.Material.Filled.AdminPanelSettings,
+            "User" => Icons.Material.Filled.Person,
+            _ => Icons.Material.Filled.Shield
+        };
+    }
+
+    private Color GetRoleColor(string? roleName)
+    {
+        return roleName switch
+        {
+            "Admin" => Color.Error,
+            "User" => Color.Primary,
+            _ => Color.Default
+        };
+    }
+}

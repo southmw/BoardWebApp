@@ -1,0 +1,32 @@
+﻿<MudNavMenu Style="padding: 16px 8px;">
+    <MudText Typo="Typo.caption" Class="px-4 mb-2" Style="color: rgba(0,0,0,0.4); font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Main Menu</MudText>
+    <MudNavLink Href="/" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home"
+                Style="border-radius: 8px; margin-bottom: 4px; font-weight: 500;">
+        Home
+    </MudNavLink>
+    <MudNavLink Href="/boards" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Forum"
+                Style="border-radius: 8px; margin-bottom: 4px; font-weight: 500;">
+        게시판
+    </MudNavLink>
+
+    <AuthorizeView Roles="Admin">
+        <MudNavLink Href="/categories" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Category"
+                    Style="border-radius: 8px; margin-bottom: 4px; font-weight: 500;">
+            카테고리 관리
+        </MudNavLink>
+    </AuthorizeView>
+
+    <AuthorizeView Roles="Admin">
+        <MudDivider Class="my-4" />
+        <MudText Typo="Typo.caption" Class="px-4 mb-2" Style="color: rgba(0,0,0,0.4); font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Admin</MudText>
+        <MudNavLink Href="/admin/roles" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.AdminPanelSettings"
+                    Style="border-radius: 8px; margin-bottom: 4px; font-weight: 500;">
+            역할 관리
+        </MudNavLink>
+        <MudNavLink Href="/admin/users" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Group"
+                    Style="border-radius: 8px; margin-bottom: 4px; font-weight: 500;">
+            사용자 관리
+        </MudNavLink>
+    </AuthorizeView>
+</MudNavMenu>
+

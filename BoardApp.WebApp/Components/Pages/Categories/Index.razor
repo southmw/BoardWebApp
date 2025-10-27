@@ -1,0 +1,245 @@
+@page "/categories"
+@using BoardApp.WebApp.Models
+@using BoardApp.WebApp.Services
+@attribute [Authorize(Roles = "Admin")]
+@inject ICategoryService CategoryService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@rendermode InteractiveServer
+
+<PageTitle>카테고리 관리</PageTitle>
+
+<MudStack Spacing="4">
+    <!-- Header Section -->
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+        <div>
+            <MudText Typo="Typo.h3" Style="font-weight: 700; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                카테고리 관리
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+                게시판 카테고리를 추가, 수정, 삭제할 수 있습니다
+            </MudText>
+        </div>
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Size="Size.Large"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Style="border-radius: 12px; padding: 12px 24px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);"
+                   OnClick="OpenCreateDialog">
+            새 카테고리 추가
+        </MudButton>
+    </MudStack>
+
+    <!-- Category List -->
+    @if (categories == null)
+    {
+        <MudStack AlignItems="AlignItems.Center" Class="py-8">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.body1" Class="mt-4">카테고리를 불러오는 중...</MudText>
+        </MudStack>
+    }
+    else if (!categories.Any())
+    {
+        <MudPaper Elevation="0" Class="pa-8" Style="border-radius: 12px; border: 2px dashed #e0e0e0;">
+            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Category" Size="Size.Large" Color="Color.Secondary" />
+                <div style="text-align: center;">
+                    <MudText Typo="Typo.h6" Color="Color.Secondary">아직 등록된 카테고리가 없습니다</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">첫 카테고리를 추가해보세요!</MudText>
+                </div>
+            </MudStack>
+        </MudPaper>
+    }
+    else
+    {
+        <MudPaper Elevation="0" Style="border-radius: 12px; overflow: hidden;">
+            <MudTable Items="@categories"
+                      Hover="true"
+                      Breakpoint="Breakpoint.Sm"
+                      Elevation="0"
+                      Style="background: white;">
+                <HeaderContent>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">이름</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">설명</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">색상</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">고정</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">게시글 수</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">순서</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">상태</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">작업</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="이름">
+                        <span style="font-weight: 600;">@context.Name</span>
+                    </MudTd>
+                    <MudTd DataLabel="설명">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @(string.IsNullOrEmpty(context.Description) ? "-" : context.Description)
+                        </MudText>
+                    </MudTd>
+                    <MudTd DataLabel="색상">
+                        <MudChip T="string" Text="@context.Color" Color="Color.Primary" Size="Size.Small" Style="@($"background-color: {context.Color}; color: white;")" />
+                    </MudTd>
+                    <MudTd DataLabel="고정">
+                        @if (context.IsPinned)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.PushPin" Color="Color.Warning" Size="Size.Small" />
+                        }
+                        else
+                        {
+                            <MudText>-</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="게시글 수">
+                        @if (boardCounts.ContainsKey(context.Id))
+                        {
+                            <MudChip T="string" Text="@($"{boardCounts[context.Id]}개")" Size="Size.Small" Color="Color.Info" />
+                        }
+                        else
+                        {
+                            <MudText>0개</MudText>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="순서">
+                        <MudText>@context.DisplayOrder</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="상태">
+                        @if (context.IsActive)
+                        {
+                            <MudChip T="string" Text="활성" Size="Size.Small" Color="Color.Success" />
+                        }
+                        else
+                        {
+                            <MudChip T="string" Text="비활성" Size="Size.Small" Color="Color.Default" />
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="작업">
+                        <MudStack Row="true" Spacing="1">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                           Color="Color.Primary"
+                                           Size="Size.Small"
+                                           OnClick="@(() => OpenEditDialog(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           Size="Size.Small"
+                                           OnClick="@(() => DeleteCategory(context))" />
+                        </MudStack>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+    }
+</MudStack>
+
+@code {
+    private List<Category>? categories;
+    private Dictionary<int, int> boardCounts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+    }
+
+    private async Task LoadCategories()
+    {
+        categories = await CategoryService.GetAllCategoriesAsync();
+
+        // 각 카테고리별 게시글 수 조회
+        boardCounts.Clear();
+        if (categories != null)
+        {
+            foreach (var category in categories)
+            {
+                var count = await CategoryService.GetBoardCountByCategoryAsync(category.Id);
+                boardCounts[category.Id] = count;
+            }
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters<CategoryDialog>
+        {
+            { x => x.Category, new Category() },
+            { x => x.IsEditMode, false }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<CategoryDialog>("새 카테고리 추가", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadCategories();
+            Snackbar.Add("카테고리가 추가되었습니다.", Severity.Success);
+        }
+    }
+
+    private async Task OpenEditDialog(Category category)
+    {
+        var parameters = new DialogParameters<CategoryDialog>
+        {
+            { x => x.Category, category },
+            { x => x.IsEditMode, true }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<CategoryDialog>("카테고리 수정", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadCategories();
+            Snackbar.Add("카테고리가 수정되었습니다.", Severity.Success);
+        }
+    }
+
+    private async Task DeleteCategory(Category category)
+    {
+        // 게시글 수 확인
+        var boardCount = boardCounts.ContainsKey(category.Id) ? boardCounts[category.Id] : 0;
+
+        if (boardCount > 0)
+        {
+            Snackbar.Add($"해당 카테고리에 {boardCount}개의 게시글이 있어 삭제할 수 없습니다.", Severity.Warning);
+            return;
+        }
+
+        var parameters = new DialogParameters
+        {
+            { "ContentText", $"'{category.Name}' 카테고리를 삭제하시겠습니까?" },
+            { "ButtonText", "삭제" },
+            { "Color", Color.Error }
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.ExtraSmall };
+        var dialog = await DialogService.ShowAsync<MudMessageBox>("카테고리 삭제", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var success = await CategoryService.DeleteCategoryAsync(category.Id);
+            if (success)
+            {
+                await LoadCategories();
+                Snackbar.Add("카테고리가 삭제되었습니다.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("카테고리 삭제에 실패했습니다.", Severity.Error);
+            }
+        }
+    }
+}

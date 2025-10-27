@@ -1,0 +1,246 @@
+@page "/admin/users"
+@using BoardApp.WebApp.Models
+@using BoardApp.WebApp.Services
+@using Microsoft.AspNetCore.Identity
+@attribute [Authorize(Roles = "Admin")]
+@inject IUserService UserService
+@inject IRoleService RoleService
+@inject UserManager<ApplicationUser> UserManager
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@rendermode InteractiveServer
+
+<PageTitle>사용자 관리</PageTitle>
+
+<MudStack Spacing="4">
+    <!-- Header Section -->
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+        <div>
+            <MudText Typo="Typo.h3" Style="font-weight: 700; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                사용자 관리
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+                시스템 사용자를 관리하고 역할을 할당할 수 있습니다
+            </MudText>
+        </div>
+        <MudStack Row="true" Spacing="2">
+            <MudTextField @bind-Value="searchString"
+                          Placeholder="이메일 또는 이름으로 검색"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          IconSize="Size.Medium"
+                          Variant="Variant.Outlined"
+                          Clearable="true"
+                          OnClearButtonClick="ClearSearch" />
+        </MudStack>
+    </MudStack>
+
+    <!-- Statistics Cards -->
+    @if (totalUserCount > 0)
+    {
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="0" Class="pa-4" Style="border-radius: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.h4" Style="color: white; font-weight: 700;">@totalUserCount</MudText>
+                        <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">전체 사용자</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="0" Class="pa-4" Style="border-radius: 12px; background: linear-gradient(135deg, #06d6a0 0%, #06d6a0 100%);">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.h4" Style="color: white; font-weight: 700;">@adminCount</MudText>
+                        <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">관리자</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudPaper Elevation="0" Class="pa-4" Style="border-radius: 12px; background: linear-gradient(135deg, #4cc9f0 0%, #4cc9f0 100%);">
+                    <MudStack Spacing="1">
+                        <MudText Typo="Typo.h4" Style="color: white; font-weight: 700;">@userCount</MudText>
+                        <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">일반 사용자</MudText>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+
+    <!-- User List -->
+    @if (users == null)
+    {
+        <MudStack AlignItems="AlignItems.Center" Class="py-8">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.body1" Class="mt-4">사용자 목록을 불러오는 중...</MudText>
+        </MudStack>
+    }
+    else if (!FilteredUsers.Any())
+    {
+        <MudPaper Elevation="0" Class="pa-8" Style="border-radius: 12px; border: 2px dashed #e0e0e0;">
+            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.PersonOff" Size="Size.Large" Color="Color.Secondary" />
+                <div style="text-align: center;">
+                    <MudText Typo="Typo.h6" Color="Color.Secondary">
+                        @(string.IsNullOrWhiteSpace(searchString) ? "등록된 사용자가 없습니다" : "검색 결과가 없습니다")
+                    </MudText>
+                </div>
+            </MudStack>
+        </MudPaper>
+    }
+    else
+    {
+        <MudPaper Elevation="0" Style="border-radius: 12px; overflow: hidden;">
+            <MudTable Items="@FilteredUsers"
+                      Hover="true"
+                      Breakpoint="Breakpoint.Sm"
+                      Elevation="0"
+                      Style="background: white;">
+                <HeaderContent>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">사용자</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">이메일</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">역할</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">이메일 확인</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">가입일</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">작업</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="사용자">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                            <MudAvatar Color="Color.Primary" Size="Size.Small">
+                                @GetUserInitials(context)
+                            </MudAvatar>
+                            <span style="font-weight: 600;">@(context.DisplayName ?? context.UserName)</span>
+                        </MudStack>
+                    </MudTd>
+                    <MudTd DataLabel="이메일">
+                        <MudText Typo="Typo.body2">@context.Email</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="역할">
+                        @if (userRoles.ContainsKey(context.Id))
+                        {
+                            <MudStack Row="true" Spacing="1">
+                                @foreach (var role in userRoles[context.Id])
+                                {
+                                    <MudChip T="string" Text="@role" Size="Size.Small" Color="@GetRoleChipColor(role)" />
+                                }
+                            </MudStack>
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="이메일 확인">
+                        @if (context.EmailConfirmed)
+                        {
+                            <MudChip T="string" Text="확인됨" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.CheckCircle" />
+                        }
+                        else
+                        {
+                            <MudChip T="string" Text="미확인" Size="Size.Small" Color="Color.Default" Icon="@Icons.Material.Filled.Cancel" />
+                        }
+                    </MudTd>
+                    <MudTd DataLabel="가입일">
+                        <MudText Typo="Typo.body2">@context.CreatedAt.ToString("yyyy-MM-dd")</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="작업">
+                        <MudIconButton Icon="@Icons.Material.Filled.PersonAdd"
+                                       Color="Color.Primary"
+                                       Size="Size.Small"
+                                       Title="역할 관리"
+                                       OnClick="@(() => OpenRoleManagementDialog(context))" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+    }
+</MudStack>
+
+@code {
+    private List<ApplicationUser>? users;
+    private Dictionary<string, List<string>> userRoles = new();
+    private int totalUserCount = 0;
+    private int adminCount = 0;
+    private int userCount = 0;
+    private string searchString = "";
+
+    private IEnumerable<ApplicationUser> FilteredUsers =>
+        users?.Where(u =>
+            string.IsNullOrWhiteSpace(searchString) ||
+            (u.Email?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (u.DisplayName?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (u.UserName?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false)
+        ) ?? Enumerable.Empty<ApplicationUser>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        users = await UserService.GetAllUsersAsync();
+        totalUserCount = await UserService.GetTotalUserCountAsync();
+
+        // 각 사용자별 역할 조회
+        userRoles.Clear();
+        if (users != null)
+        {
+            foreach (var user in users)
+            {
+                var roles = await UserService.GetUserRolesAsync(user.Id);
+                userRoles[user.Id] = roles;
+            }
+        }
+
+        // 통계 계산
+        var admins = await RoleService.GetUsersInRoleAsync("Admin");
+        var regularUsers = await RoleService.GetUsersInRoleAsync("User");
+        adminCount = admins.Count;
+        userCount = regularUsers.Count;
+    }
+
+    private async Task OpenRoleManagementDialog(ApplicationUser user)
+    {
+        var parameters = new DialogParameters<UserRoleDialog>
+        {
+            { x => x.User, user },
+            { x => x.CurrentRoles, userRoles.ContainsKey(user.Id) ? userRoles[user.Id] : new List<string>() }
+        };
+
+        var options = new DialogOptions
+        {
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true,
+            CloseButton = true
+        };
+
+        var dialog = await DialogService.ShowAsync<UserRoleDialog>($"{user.DisplayName ?? user.Email} 역할 관리", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadUsers();
+            Snackbar.Add("사용자 역할이 업데이트되었습니다.", Severity.Success);
+        }
+    }
+
+    private void ClearSearch()
+    {
+        searchString = "";
+    }
+
+    private string GetUserInitials(ApplicationUser user)
+    {
+        var displayName = user.DisplayName ?? user.Email ?? "U";
+        if (displayName.Length >= 2)
+            return displayName.Substring(0, 2).ToUpper();
+        return displayName.Substring(0, 1).ToUpper();
+    }
+
+    private Color GetRoleChipColor(string roleName)
+    {
+        return roleName switch
+        {
+            "Admin" => Color.Error,
+            "User" => Color.Primary,
+            _ => Color.Default
+        };
+    }
+}

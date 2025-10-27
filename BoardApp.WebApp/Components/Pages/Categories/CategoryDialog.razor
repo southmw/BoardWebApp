@@ -1,0 +1,117 @@
+@using BoardApp.WebApp.Models
+@using BoardApp.WebApp.Services
+@inject ICategoryService CategoryService
+@inject IDialogService DialogService
+
+<MudDialog>
+    <DialogContent>
+        <EditForm Model="@Category" OnValidSubmit="HandleValidSubmit">
+            <DataAnnotationsValidator />
+
+            <MudStack Spacing="3">
+                <MudTextField Label="카테고리명"
+                              @bind-Value="Category.Name"
+                              For="@(() => Category.Name)"
+                              Variant="Variant.Outlined"
+                              Required="true" />
+
+                <MudTextField Label="설명"
+                              @bind-Value="Category.Description"
+                              For="@(() => Category.Description)"
+                              Variant="Variant.Outlined"
+                              Lines="3" />
+
+                <MudColorPicker Label="색상"
+                                @bind-Value="colorValue"
+                                ColorPickerMode="ColorPickerMode.RGB"
+                                DisableToolbar="false"
+                                Placeholder="#667eea"
+                                Style="width: 100%;" />
+
+                <MudNumericField Label="정렬 순서"
+                                 @bind-Value="Category.DisplayOrder"
+                                 For="@(() => Category.DisplayOrder)"
+                                 Variant="Variant.Outlined"
+                                 Min="0" />
+
+                <MudSwitch @bind-Value="Category.IsPinned"
+                           Label="상단 고정 카테고리"
+                           Color="Color.Warning">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        이 카테고리의 게시글을 게시판 최상단에 고정 표시합니다
+                    </MudText>
+                </MudSwitch>
+
+                <MudSwitch @bind-Value="Category.IsActive"
+                           Label="활성화"
+                           Color="Color.Success">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        비활성화 시 게시글 작성 시 선택할 수 없습니다
+                    </MudText>
+                </MudSwitch>
+            </MudStack>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">취소</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">
+            @(IsEditMode ? "수정" : "추가")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IDialogReference? MudDialog { get; set; }
+
+    [Parameter]
+    public Category Category { get; set; } = new();
+
+    [Parameter]
+    public bool IsEditMode { get; set; } = false;
+
+    private MudBlazor.Utilities.MudColor colorValue = new MudBlazor.Utilities.MudColor("#667eea");
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrEmpty(Category.Color))
+        {
+            try
+            {
+                colorValue = new MudBlazor.Utilities.MudColor(Category.Color);
+            }
+            catch
+            {
+                colorValue = new MudBlazor.Utilities.MudColor("#667eea");
+            }
+        }
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        // MudColor에서 Hex 문자열로 변환
+        Category.Color = colorValue.ToString(MudBlazor.Utilities.MudColorOutputFormats.Hex);
+
+        try
+        {
+            if (IsEditMode)
+            {
+                await CategoryService.UpdateCategoryAsync(Category.Id, Category);
+            }
+            else
+            {
+                await CategoryService.CreateCategoryAsync(Category);
+            }
+
+            MudDialog?.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            // 에러 처리는 부모 컴포넌트에서 수행
+            MudDialog?.Close(DialogResult.Cancel());
+        }
+    }
+
+    private void Submit() => HandleValidSubmit();
+    private void Cancel() => MudDialog?.Close();
+}

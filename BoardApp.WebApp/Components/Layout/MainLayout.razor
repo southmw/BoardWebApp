@@ -1,0 +1,68 @@
+﻿@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="_customTheme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider Position="SnackbarPosition.BottomRight" />
+
+<MudLayout>
+    <MudAppBar Elevation="0" Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); backdrop-filter: blur(10px);">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@DrawerToggle" />
+        <MudIcon Icon="@Icons.Material.Filled.Layers" Class="mr-2" />
+        <MudText Typo="Typo.h5" Style="font-weight: 600; letter-spacing: 0.5px;">South Board</MudText>
+        <MudSpacer />
+        <LoginDisplay />
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" Breakpoint="Breakpoint.Lg" Elevation="1" Variant="@DrawerVariant.Responsive" ClipMode="DrawerClipMode.Always">
+        <MudDrawerHeader Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px;">
+            <MudStack Spacing="2" AlignItems="AlignItems.Center">
+                <MudAvatar Style="width: 60px; height: 60px; background: rgba(255,255,255,0.2);">
+                    <MudIcon Icon="@Icons.Material.Filled.Dashboard" Size="Size.Large" />
+                </MudAvatar>
+                <MudText Typo="Typo.h6" Style="color: white; font-weight: 600;">Dashboard</MudText>
+            </MudStack>
+        </MudDrawerHeader>
+        <NavMenu />
+    </MudDrawer>
+    <MudMainContent Style="background: linear-gradient(to bottom, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh;">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-8">
+            <MudPaper Elevation="0" Class="pa-6" Style="background: rgba(255, 255, 255, 0.95); border-radius: 16px; backdrop-filter: blur(10px); box-shadow: 0 8px 32px rgba(0,0,0,0.1);">
+                @Body
+            </MudPaper>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+
+    private MudTheme _customTheme = new MudTheme()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#667eea",
+            Secondary = "#764ba2",
+            AppbarBackground = "#667eea",
+            Background = "#f5f7fa",
+            Surface = "#ffffff",
+            DrawerBackground = "#ffffff",
+            DrawerText = "rgba(0,0,0,0.7)",
+            Success = "#06d6a0",
+            Info = "#4cc9f0",
+            Warning = "#ffd166",
+            Error = "#ef476f",
+            TextPrimary = "rgba(0,0,0,0.87)",
+            TextSecondary = "rgba(0,0,0,0.6)",
+        },
+        LayoutProperties = new LayoutProperties()
+        {
+            DrawerWidthLeft = "260px",
+            AppbarHeight = "64px",
+        }
+    };
+
+    private void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}

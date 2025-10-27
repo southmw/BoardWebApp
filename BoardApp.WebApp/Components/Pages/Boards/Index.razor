@@ -1,0 +1,331 @@
+@page "/boards"
+@using BoardApp.WebApp.Models
+@using BoardApp.WebApp.Services
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IBoardService BoardService
+@inject ICategoryService CategoryService
+@inject NavigationManager NavigationManager
+@rendermode InteractiveServer
+
+<PageTitle>게시판</PageTitle>
+
+<MudStack Spacing="4">
+    <!-- Header Section -->
+    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-2">
+        <div>
+            <MudText Typo="Typo.h3" Style="font-weight: 700; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                게시판
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+                자유롭게 의견을 나누고 소통하는 공간입니다
+            </MudText>
+        </div>
+        <AuthorizeView>
+            <Authorized>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.Create"
+                           Style="border-radius: 12px; padding: 12px 24px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);"
+                           OnClick="@(() => NavigationManager.NavigateTo("/boards/create"))">
+                    새 글 작성
+                </MudButton>
+            </Authorized>
+            <NotAuthorized>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.Login"
+                           Style="border-radius: 12px; padding: 12px 24px;"
+                           OnClick="@(() => NavigationManager.NavigateTo("/account/login?returnUrl=/boards/create"))">
+                    로그인하고 글쓰기
+                </MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
+    </MudStack>
+
+    <!-- Stats Cards -->
+    @if (allBoards != null)
+    {
+        <MudGrid>
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="0" Class="pa-4" Style="border-radius: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <div>
+                            <MudText Typo="Typo.body2" Style="opacity: 0.9;">전체 게시글</MudText>
+                            <MudText Typo="Typo.h5" Style="font-weight: 700;">@allBoards.Count</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.Article" Size="Size.Large" Style="opacity: 0.8;" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="0" Class="pa-4" Style="border-radius: 12px; background: linear-gradient(135deg, #06d6a0 0%, #1b9aaa 100%); color: white;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <div>
+                            <MudText Typo="Typo.body2" Style="opacity: 0.9;">오늘 작성</MudText>
+                            <MudText Typo="Typo.h5" Style="font-weight: 700;">@allBoards.Count(b => b.CreatedAt.Date == DateTime.Today)</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.Today" Size="Size.Large" Style="opacity: 0.8;" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudPaper Elevation="0" Class="pa-4" Style="border-radius: 12px; background: linear-gradient(135deg, #ffd166 0%, #ef476f 100%); color: white;">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <div>
+                            <MudText Typo="Typo.body2" Style="opacity: 0.9;">전체 조회수</MudText>
+                            <MudText Typo="Typo.h5" Style="font-weight: 700;">@allBoards.Sum(b => b.ViewCount)</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Large" Style="opacity: 0.8;" />
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+
+    <!-- Category Filter Buttons -->
+    @if (categories != null && categories.Any())
+    {
+        <MudPaper Elevation="0" Class="pa-3" Style="border-radius: 12px;">
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center" Style="flex-wrap: wrap;">
+                <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">카테고리:</MudText>
+                <MudButton Variant="@(selectedCategoryId == null ? Variant.Filled : Variant.Outlined)"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           OnClick="@(() => OnCategoryChanged(null))">
+                    전체
+                </MudButton>
+                @foreach (var category in categories.OrderBy(c => c.DisplayOrder))
+                {
+                    <MudButton Variant="@(selectedCategoryId == category.Id ? Variant.Filled : Variant.Outlined)"
+                               Color="Color.Primary"
+                               Size="Size.Small"
+                               Style="@(selectedCategoryId == category.Id ? $"background-color: {category.Color}; border-color: {category.Color};" : $"color: {category.Color}; border-color: {category.Color};")"
+                               OnClick="@(() => OnCategoryChanged(category.Id))">
+                        @if (category.IsPinned)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Class="mr-1" />
+                        }
+                        @category.Name
+                    </MudButton>
+                }
+            </MudStack>
+        </MudPaper>
+    }
+
+    <!-- Page Size Selector -->
+    <MudStack Row="true" Justify="Justify.FlexEnd" AlignItems="AlignItems.Center" Spacing="2">
+        <MudText Typo="Typo.body2">페이지당 게시글:</MudText>
+        <MudSelect T="int" Value="@pageSize" ValueChanged="OnPageSizeChanged" Variant="Variant.Outlined" Dense="true" Style="min-width: 100px;">
+            <MudSelectItem Value="15">15개</MudSelectItem>
+            <MudSelectItem Value="30">30개</MudSelectItem>
+            <MudSelectItem Value="50">50개</MudSelectItem>
+        </MudSelect>
+    </MudStack>
+
+    <!-- Board List -->
+    @if (displayBoards == null)
+    {
+        <MudStack AlignItems="AlignItems.Center" Class="py-8">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.body1" Class="mt-4">게시글을 불러오는 중...</MudText>
+        </MudStack>
+    }
+    else if (!displayBoards.Any() && !pinnedBoards.Any())
+    {
+        <MudPaper Elevation="0" Class="pa-8" Style="border-radius: 12px; border: 2px dashed #e0e0e0;">
+            <MudStack AlignItems="AlignItems.Center" Spacing="3">
+                <MudIcon Icon="@Icons.Material.Filled.Article" Size="Size.Large" Color="Color.Secondary" />
+                <div style="text-align: center;">
+                    <MudText Typo="Typo.h6" Color="Color.Secondary">아직 작성된 게시글이 없습니다</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">첫 게시글을 작성해보세요!</MudText>
+                </div>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Create"
+                           OnClick="@(() => NavigationManager.NavigateTo("/boards/create"))">
+                    글쓰기
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    }
+    else
+    {
+        <MudPaper Elevation="0" Style="border-radius: 12px; overflow: hidden;">
+            <MudTable Items="@displayBoards"
+                      Hover="true"
+                      Breakpoint="Breakpoint.Sm"
+                      Elevation="0"
+                      Style="background: white;">
+                <HeaderContent>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">번호</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">카테고리</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">제목</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">작성자</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">조회수</MudTh>
+                    <MudTh Style="background: linear-gradient(135deg, #667eea 0%, #667eea 100%); color: white; font-weight: 600;">작성일</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="번호" Style="@(context.Category.IsPinned ? "background-color: #fff3cd;" : "")">
+                        @if (context.Category.IsPinned && currentPage == 1 && !selectedCategoryId.HasValue)
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.PushPin" Size="Size.Small" Color="Color.Warning" />
+                        }
+                        <span style="font-weight: 600; color: #667eea;">@context.Id</span>
+                    </MudTd>
+                    <MudTd DataLabel="카테고리" Style="@(context.Category.IsPinned ? "background-color: #fff3cd;" : "")">
+                        <MudChip T="string" Text="@context.Category.Name" Color="Color.Primary" Size="Size.Small" Style="@($"background-color: {context.Category.Color}; color: white;")" />
+                    </MudTd>
+                    <MudTd DataLabel="제목" Style="@(context.Category.IsPinned ? "background-color: #fff3cd;" : "")">
+                        <MudLink Href="@($"/boards/{context.Id}")" Style="font-weight: 500; color: #333; text-decoration: none;">
+                            @context.Title
+                            @if (context.Comments.Any())
+                            {
+                                <span style="display: inline-block; background: #667eea; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; margin-left: 8px;">@context.Comments.Count</span>
+                            }
+                            @if (context.CreatedAt.Date == DateTime.Today)
+                            {
+                                <span style="display: inline-block; background: #ef476f; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; margin-left: 4px;">NEW</span>
+                            }
+                        </MudLink>
+                    </MudTd>
+                    <MudTd DataLabel="작성자" Style="@(context.Category.IsPinned ? "background-color: #fff3cd;" : "")">
+                        <span style="display: inline-block; border: 1px solid #667eea; color: #667eea; padding: 4px 12px; border-radius: 16px; font-size: 0.875rem;">
+                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" /> @context.Author
+                        </span>
+                    </MudTd>
+                    <MudTd DataLabel="조회수" Style="@(context.Category.IsPinned ? "background-color: #fff3cd;" : "")">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1">
+                            <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Secondary" />
+                            <MudText>@context.ViewCount</MudText>
+                        </MudStack>
+                    </MudTd>
+                    <MudTd DataLabel="작성일" Style="@(context.Category.IsPinned ? "background-color: #fff3cd;" : "")">
+                        @context.CreatedAt.ToString("yyyy-MM-dd HH:mm")
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+        </MudPaper>
+
+        <!-- Pagination -->
+        @if (totalPages > 1)
+        {
+            <MudStack AlignItems="AlignItems.Center" Class="mt-4">
+                <MudPagination Count="@totalPages"
+                               Selected="@currentPage"
+                               SelectedChanged="OnPageChanged"
+                               BoundaryCount="1"
+                               MiddleCount="3"
+                               ShowFirstButton="true"
+                               ShowLastButton="true"
+                               Color="Color.Primary" />
+            </MudStack>
+        }
+    }
+</MudStack>
+
+@code {
+    private List<Category>? categories;
+    private List<Board>? allBoards; // 통계용
+    private List<Board>? displayBoards; // 화면 표시용
+    private List<Board> pinnedBoards = new();
+
+    private int? selectedCategoryId = null;
+    private int currentPage = 1;
+    private int pageSize = 15;
+    private int totalPages = 0;
+    private int totalCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // URL 쿼리 파라미터 읽기
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var query = QueryHelpers.ParseQuery(uri.Query);
+
+        if (query.TryGetValue("page", out var pageValue) && int.TryParse(pageValue, out var page))
+        {
+            currentPage = page;
+        }
+
+        if (query.TryGetValue("categoryId", out var categoryValue) && int.TryParse(categoryValue, out var categoryId))
+        {
+            selectedCategoryId = categoryId;
+        }
+
+        if (query.TryGetValue("pageSize", out var sizeValue) && int.TryParse(sizeValue, out var size))
+        {
+            pageSize = size;
+        }
+
+        // 카테고리 로드
+        categories = await CategoryService.GetActiveCategoriesAsync();
+
+        // 전체 게시글 로드 (통계용)
+        allBoards = await BoardService.GetAllBoardsAsync();
+
+        // 페이징된 게시글 로드
+        await LoadBoards();
+    }
+
+    private async Task LoadBoards()
+    {
+        var result = await BoardService.GetPagedBoardsWithCategoryAsync(currentPage, pageSize, selectedCategoryId);
+
+        totalCount = result.totalCount;
+        totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+        // 1페이지이고 전체 보기인 경우 고정/일반 분리
+        if (currentPage == 1 && !selectedCategoryId.HasValue)
+        {
+            pinnedBoards = result.boards.Where(b => b.Category.IsPinned).ToList();
+            var regularBoards = result.boards.Where(b => !b.Category.IsPinned).ToList();
+            displayBoards = pinnedBoards.Concat(regularBoards).ToList();
+        }
+        else
+        {
+            pinnedBoards = new List<Board>();
+            displayBoards = result.boards;
+        }
+
+        UpdateUrl();
+    }
+
+    private async Task OnCategoryChanged(int? categoryId)
+    {
+        selectedCategoryId = categoryId;
+        currentPage = 1;
+        await LoadBoards();
+    }
+
+    private async Task OnPageChanged(int page)
+    {
+        currentPage = page;
+        await LoadBoards();
+    }
+
+    private async Task OnPageSizeChanged(int newSize)
+    {
+        pageSize = newSize;
+        currentPage = 1;
+        await LoadBoards();
+    }
+
+    private void UpdateUrl()
+    {
+        var queryParams = new Dictionary<string, string?>
+        {
+            ["page"] = currentPage.ToString(),
+            ["pageSize"] = pageSize.ToString()
+        };
+
+        if (selectedCategoryId.HasValue)
+        {
+            queryParams["categoryId"] = selectedCategoryId.Value.ToString();
+        }
+
+        var url = QueryHelpers.AddQueryString("/boards", queryParams);
+        NavigationManager.NavigateTo(url, replace: true);
+    }
+}

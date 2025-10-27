@@ -1,0 +1,110 @@
+@page "/account/login"
+@using BoardApp.WebApp.Models
+
+<PageTitle>로그인</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+    <MudPaper Elevation="3" Class="pa-6" Style="border-radius: 16px;">
+        <MudStack Spacing="4">
+            <div style="text-align: center;">
+                <MudText Typo="Typo.h4" Style="font-weight: 700; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                    로그인
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
+                    Southmw 게시판에 오신 것을 환영합니다
+                </MudText>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Variant="Variant.Filled">@errorMessage</MudAlert>
+            }
+
+            <form method="post" action="/account/perform-login" style="width: 100%;">
+                <input type="hidden" name="returnUrl" value="@ReturnUrl" />
+
+                <MudStack Spacing="3">
+                    <MudTextField T="string"
+                                  Label="이메일"
+                                  Name="email"
+                                  Variant="Variant.Outlined"
+                                  InputType="InputType.Email"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Email"
+                                  Required="true" />
+
+                    <MudTextField T="string"
+                                  Label="비밀번호"
+                                  Name="password"
+                                  Variant="Variant.Outlined"
+                                  InputType="@passwordInputType"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@passwordVisibilityIcon"
+                                  OnAdornmentClick="TogglePasswordVisibility"
+                                  AdornmentAriaLabel="비밀번호 표시/숨김"
+                                  Required="true" />
+
+                    <MudCheckBox T="bool"
+                                 Name="rememberMe"
+                                 Color="Color.Primary">
+                        로그인 상태 유지
+                    </MudCheckBox>
+
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Size="Size.Large"
+                               Style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        로그인
+                    </MudButton>
+                </MudStack>
+            </form>
+
+            <MudDivider />
+
+            <MudButton Href="/account/external-login?provider=Google"
+                       Variant="Variant.Outlined"
+                       FullWidth="true"
+                       StartIcon="@Icons.Custom.Brands.Google"
+                       Color="Color.Default">
+                Google로 로그인
+            </MudButton>
+
+            <MudText Typo="Typo.body2" Align="Align.Center">
+                계정이 없으신가요?
+                <MudLink Href="/account/register" Style="font-weight: 600; color: #667eea;">
+                    회원가입
+                </MudLink>
+            </MudText>
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    [SupplyParameterFromQuery]
+    public string? Error { get; set; }
+
+    private string? errorMessage;
+    private bool isPasswordVisible = false;
+    private InputType passwordInputType = InputType.Password;
+    private string passwordVisibilityIcon = Icons.Material.Filled.VisibilityOff;
+
+    protected override void OnInitialized()
+    {
+        if (Error == "invalid")
+        {
+            errorMessage = "이메일 또는 비밀번호가 올바르지 않습니다.";
+        }
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        isPasswordVisible = !isPasswordVisible;
+        passwordInputType = isPasswordVisible ? InputType.Text : InputType.Password;
+        passwordVisibilityIcon = isPasswordVisible ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+    }
+}

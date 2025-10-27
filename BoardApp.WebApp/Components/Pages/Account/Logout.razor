@@ -1,0 +1,32 @@
+@page "/account/logout"
+@using Microsoft.AspNetCore.Components
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+
+<PageTitle>로그아웃</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+    <MudPaper Elevation="3" Class="pa-6" Style="border-radius: 16px;">
+        <MudStack Spacing="4" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h5">로그아웃 중...</MudText>
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // JavaScript를 사용하여 POST 요청으로 form submit
+            await JS.InvokeVoidAsync("eval", @"
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/account/perform-logout';
+                document.body.appendChild(form);
+                form.submit();
+            ");
+        }
+    }
+}
