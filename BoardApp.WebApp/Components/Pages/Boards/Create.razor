@@ -87,49 +87,50 @@
                         <MudIcon Icon="@Icons.Material.Filled.Description" Size="Size.Small" Class="mr-1" /> 내용
                     </MudText>
                     <MudPaper Elevation="0" Height="300px" Style="border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
-                        <BlazoredTextEditor @ref="quillEditor" Placeholder="내용을 입력하세요...">
-            <ToolbarContent>
-                <select class="ql-header">
-                    <option selected=""></option>
-                    <option value="1"></option>
-                    <option value="2"></option>
-                    <option value="3"></option>
-                    <option value="4"></option>
-                    <option value="5"></option>
-                </select>
-                <span class="ql-formats">
-                    <button class="ql-bold"></button>
-                    <button class="ql-italic"></button>
-                    <button class="ql-underline"></button>
-                    <button class="ql-strike"></button>
-                </span>
-                <span class="ql-formats">
-                    <select class="ql-color"></select>
-                    <select class="ql-background"></select>
-                </span>
-                <span class="ql-formats">
-                    <button class="ql-list" value="ordered"></button>
-                    <button class="ql-list" value="bullet"></button>
-                    <button class="ql-indent" value="-1"></button>
-                    <button class="ql-indent" value="+1"></button>                    
-                </span>
-                <span class="ql-formats">
-                    <select class="ql-align"></select>
-                </span>                
-                <span class="ql-formats">
-                    <button class="ql-link"></button>
-                    <button class="ql-image"></button>
-                    <button class="ql-video"></button>
-                </span>
-                <span class="ql-formats">
-                    <button class="ql-blockquote"></button>
-                </span>
-                <span class="ql-formats">
-                    <button class="ql-clean"></button>
-                </span>
-            </ToolbarContent>
-            <EditorContent>
-            </EditorContent>
+                        <BlazoredTextEditor @ref="quillEditor" Syntax="true" Placeholder="내용을 입력하세요...">
+                            <ToolbarContent >
+                                <select class="ql-header">
+                                    <option selected=""></option>
+                                    <option value="1"></option>
+                                    <option value="2"></option>
+                                    <option value="3"></option>
+                                    <option value="4"></option>
+                                    <option value="5"></option>
+                                </select>
+                                <span class="ql-formats">
+                                    <button class="ql-bold"></button>
+                                    <button class="ql-italic"></button>
+                                    <button class="ql-underline"></button>
+                                    <button class="ql-strike"></button>
+                                </span>
+                                <span class="ql-formats">
+                                    <select class="ql-color"></select>
+                                    <select class="ql-background"></select>
+                                </span>
+                                <span class="ql-formats">
+                                    <button class="ql-list" value="ordered"></button>
+                                    <button class="ql-list" value="bullet"></button>
+                                    <button class="ql-indent" value="-1"></button>
+                                    <button class="ql-indent" value="+1"></button>                    
+                                </span>
+                                <span class="ql-formats">
+                                    <select class="ql-align"></select>
+                                </span>                
+                                <span class="ql-formats">
+                                    <button class="ql-link"></button>
+                                    <button class="ql-image"></button>
+                                    <button class="ql-video"></button>
+                                </span>
+                                <span class="ql-formats">
+                                    <button class="ql-blockquote"></button>
+                                    <button class="ql-code-block"></button>
+                                </span>
+                                <span class="ql-formats">
+                                    <button class="ql-clean"></button>
+                                </span>
+                            </ToolbarContent>
+                            <EditorContent>
+                            </EditorContent>
                         </BlazoredTextEditor>
                     </MudPaper>
                 </div>
