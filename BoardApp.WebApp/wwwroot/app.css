@@ -58,3 +58,47 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* Quill Editor - 동영상 반응형 및 크기 조정 */
+.ql-editor iframe {
+    max-width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9; /* 16:9 비율 유지 */
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+/* 동영상 컨테이너 반응형 래퍼 */
+.ql-video {
+    display: block;
+    max-width: 100%;
+}
+
+/* 에디터 내 동영상 크기 조정 가능하도록 */
+.ql-editor .ql-video {
+    width: 640px; /* 기본 너비 */
+    max-width: 100%;
+    height: 360px; /* 기본 높이 (16:9 비율) */
+    resize: both; /* 크기 조정 가능 */
+    overflow: auto;
+    border: 2px dashed #ccc;
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+.ql-editor .ql-video:hover {
+    border-color: #667eea;
+    cursor: move;
+}
+
+/* 게시글 상세보기에서 동영상 스타일 */
+.board-content iframe,
+.board-content .ql-video {
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: 8px;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}

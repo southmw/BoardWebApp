@@ -186,7 +186,7 @@ Google OAuth 인증도 구성되어 있으나, `appsettings.json`에 ClientId와
 ### 데이터베이스 구성
 
 **연결 문자열:** `appsettings.json`에 위치
-- 데이터베이스: `SouthmwWebApp`
+- 데이터베이스: `BoardWebApp`
 - 서버: `127.0.0.1`의 SQL Server
 - 인증: SQL Server 자격 증명 (sa/cloocus@2025)
 - TrustServerCertificate: True (개발 환경)
